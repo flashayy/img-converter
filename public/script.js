@@ -1,12 +1,10 @@
 (() => {
   /* =====================================================
-     HELPERS (mini utilitky)
+     HELPERS
      ===================================================== */
 
-  // skratka na getElementById
   const $ = (id) => document.getElementById(id);
 
-  // prevod bajtov na “ľudské” jednotky (B/KB/MB/GB)
   const prettyBytes = (bytes) => {
     if (!Number.isFinite(bytes)) return "–";
     const u = ["B", "KB", "MB", "GB"];
@@ -15,50 +13,46 @@
     return `${n.toFixed(i === 0 ? 0 : 2)} ${u[i]}`;
   };
 
-  // vypočíta percento ušetrenej veľkosti: input -> output
   const pctSaved = (inB, outB) => {
     if (!inB || !outB) return "–";
     return `${((1 - outB / inB) * 100).toFixed(1)}%`;
   };
 
-
   /* =====================================================
-     DOM ELEMENTS (referencie na UI)
+     DOM ELEMENTS
      ===================================================== */
 
-  // upload UI
   const dropzone = $("dropzone");
   const fileInput = $("file");
   const browse = $("browse");
 
-  // nastavenia výstupu
   const formatEl = $("format");
   const qualityEl = $("quality");
   const qVal = $("qVal");
 
-  // hlavné tlačidlá + status hláška
   const convertBtn = $("convert");
   const clearBtn = $("clear");
   const statusEl = $("status");
 
-  // list s položkami + empty placeholder
   const listEl = $("list");
   const emptyState = $("emptyState");
 
-  // sumarizácia: total input, total output, ušetrené
   const summary = $("summary");
   const sumIn = $("sumIn");
   const sumOut = $("sumOut");
   const sumSave = $("sumSave");
 
-  // theme toggle UI
   const themeToggle = $("themeToggle");
   const themeIcon = $("themeIcon");
   const themeText = $("themeText");
 
+  // Global progress UI (optional)
+  const gprog = $("gprog");
+  const gprogPct = $("gprogPct");
+  const gprogFill = $("gprogFill");
 
   /* =====================================================
-     BASIC SANITY CHECK (pomôže pri chybných id v HTML)
+     SANITY CHECK
      ===================================================== */
 
   const required = [
@@ -70,73 +64,59 @@
     themeToggle, themeIcon, themeText
   ];
 
-  // ak niečo chýba, iba to vypíšeme do konzoly
-  // nech to hneď uvidíš pri debugovaní HTML
   if (required.some(x => !x)) {
     console.error("Missing one or more DOM elements. Check index.html ids.", {
-      dropzone, fileInput, browse, formatEl, qualityEl, qVal,
-      convertBtn, clearBtn, statusEl, listEl, emptyState,
-      summary, sumIn, sumOut, sumSave, themeToggle, themeIcon, themeText
+      dropzone, fileInput, browse,
+      formatEl, qualityEl, qVal,
+      convertBtn, clearBtn, statusEl,
+      listEl, emptyState,
+      summary, sumIn, sumOut, sumSave,
+      themeToggle, themeIcon, themeText
     });
-    // stále pokračujeme, aby appka nespadla úplne
   }
 
-
   /* =====================================================
-     APP STATE (držanie súborov a výsledkov)
+     APP STATE
      ===================================================== */
 
-  // files = interný zoznam uploadnutých položiek
-  // každá položka: { id, file, status, outBlobUrl, outSize }
-  // status: "ready" | "working" | "done" | "error"
+  // each item: { id, file, status, outBlobUrl, outSize, progress }
   let files = [];
   let nextId = 1;
 
-
   /* =====================================================
-     STATUS MESSAGE (banner pod tlačidlami)
+     STATUS MESSAGE
      ===================================================== */
 
   const setStatus = (msg, type = "") => {
     if (!statusEl) return;
     statusEl.textContent = msg || "";
     statusEl.className = "status" + (type ? " " + type : "");
-    // type typicky: "ok" / "bad" / "" podľa CSS
   };
 
-
   /* =====================================================
-     THEME (Dark/Light) + localStorage
+     THEME
      ===================================================== */
 
-  // nastaví theme na <html data-theme="...">
   const applyTheme = (theme) => {
     document.documentElement.setAttribute("data-theme", theme);
-
-    // update ikonky + textu
     const isLight = theme === "light";
     if (themeIcon) themeIcon.textContent = isLight ? "☀" : "☾";
     if (themeText) themeText.textContent = isLight ? "Light" : "Dark";
-
-    // uloží do localStorage, aby ostalo aj po refresh
     localStorage.setItem("theme", theme);
   };
 
-  // IIFE: pri štarte načítaj uloženú tému
   (() => {
     const saved = localStorage.getItem("theme");
     applyTheme(saved === "light" ? "light" : "dark");
   })();
 
-  // click handler na prepnutie theme
   themeToggle?.addEventListener("click", () => {
     const cur = document.documentElement.getAttribute("data-theme") || "dark";
     applyTheme(cur === "dark" ? "light" : "dark");
   });
 
-
   /* =====================================================
-     QUALITY BADGE (živé číslo pri slideri)
+     QUALITY BADGE
      ===================================================== */
 
   if (qualityEl && qVal) {
@@ -144,23 +124,20 @@
     qualityEl.addEventListener("input", () => (qVal.textContent = qualityEl.value));
   }
 
-
   /* =====================================================
-     FILE FILTERING (akceptujeme iba JPEG/PNG)
+     FILE FILTERING
      ===================================================== */
 
   const normalizePicked = (list) => {
     const out = [];
     for (const f of list) {
-      // tu je zámerne filter: iba image/jpeg alebo image/png
       if (/^image\/(jpeg|png)$/.test(f.type)) out.push(f);
     }
     return out;
   };
 
-
   /* =====================================================
-     UI ENABLE/DISABLE (Convert/Clear)
+     UI ENABLE/DISABLE
      ===================================================== */
 
   const updateButtons = () => {
@@ -169,26 +146,20 @@
     if (clearBtn) clearBtn.disabled = !has;
   };
 
-
   /* =====================================================
-     SUMMARY PANEL (sumár pre batch)
+     SUMMARY
      ===================================================== */
 
   const updateSummary = () => {
     if (!summary || !sumIn || !sumOut || !sumSave) return;
-
-    // ak nie sú žiadne súbory, summary skryj
     if (!files.length) { summary.hidden = true; return; }
 
-    // spočítaj total input a total output (iba tie čo už majú output)
     let totalIn = 0, totalOut = 0, anyOut = false;
-
     for (const it of files) {
       totalIn += it.file.size;
       if (it.outSize != null) { totalOut += it.outSize; anyOut = true; }
     }
 
-    // ak nič ešte nebolo skonvertované, tiež skryj
     if (!anyOut) { summary.hidden = true; return; }
 
     summary.hidden = false;
@@ -197,27 +168,53 @@
     sumSave.textContent = `${prettyBytes(totalIn - totalOut)} (${pctSaved(totalIn, totalOut)})`;
   };
 
+  /* =====================================================
+     PROGRESS HELPERS
+     ===================================================== */
+
+  function updateGlobalProgress() {
+    if (!gprog || !gprogFill || !gprogPct) return;
+
+    if (!files.length) {
+      gprog.hidden = true;
+      gprogFill.style.width = "0%";
+      gprogPct.textContent = "0%";
+      return;
+    }
+
+    const active = files.filter(f => f.status === "working" || f.status === "done" || f.status === "error");
+    const list = active.length ? active : files;
+
+    const avg = list.reduce((a, f) => a + (f.progress || 0), 0) / list.length;
+    const pct = Math.round(avg);
+
+    gprog.hidden = false;
+    gprogFill.style.width = `${pct}%`;
+    gprogPct.textContent = `${pct}%`;
+  }
+
+  function setItemProgress(id, p) {
+    const it = files.find(x => x.id === id);
+    if (!it) return;
+    it.progress = Math.max(0, Math.min(100, p));
+    render();
+    updateGlobalProgress();
+  }
 
   /* =====================================================
-     RENDER (prekreslenie zoznamu súborov)
+     RENDER
      ===================================================== */
 
   const render = () => {
     if (!listEl || !emptyState) return;
 
-    // vymaž existujúce .item DOM nodes
     listEl.querySelectorAll(".item").forEach(n => n.remove());
-
-    // empty state: zobraz ak nie sú files
     emptyState.style.display = files.length ? "none" : "block";
 
-    // vytvor nový DOM pre každý file item
     for (const it of files) {
       const item = document.createElement("div");
       item.className = "item";
       item.dataset.id = String(it.id);
-
-      /* ----- LEFT SIDE: názov, meta, KPI ----- */
 
       const left = document.createElement("div");
 
@@ -228,7 +225,6 @@
       name.className = "itemName";
       name.textContent = it.file.name;
 
-      // badge podľa statusu položky
       const badge = document.createElement("div");
       badge.className = "itemBadge";
       badge.textContent =
@@ -239,12 +235,10 @@
       top.appendChild(name);
       top.appendChild(badge);
 
-      // metadata (MIME + veľkosť)
       const meta = document.createElement("div");
       meta.className = "itemMeta";
       meta.textContent = `${it.file.type} • ${prettyBytes(it.file.size)}`;
 
-      // KPI blok (pred/po/ušetrené)
       const kpi = document.createElement("div");
       kpi.className = "kpi";
 
@@ -266,21 +260,29 @@
       left.appendChild(meta);
       left.appendChild(kpi);
 
-      /* ----- RIGHT SIDE: actions ----- */
+      // Per-item progress
+      const prog = document.createElement("div");
+      prog.className = "iprog";
+      prog.innerHTML = `<div class="iprogFill" style="width:${it.progress || 0}%"></div>`;
+
+      const progMeta = document.createElement("div");
+      progMeta.className = "iprogMeta";
+      progMeta.innerHTML = `<span>${it.status === "working" ? "Konvertujem…" : ""}</span><span>${Math.round(it.progress || 0)}%</span>`;
+
+      left.appendChild(prog);
+      left.appendChild(progMeta);
 
       const actions = document.createElement("div");
       actions.className = "itemActions";
 
-      // download link (funkčný až po konverzii)
       const dl = document.createElement("a");
       dl.className = "smallBtn";
       dl.textContent = "Download";
       dl.href = it.outBlobUrl || "#";
-      dl.download = ""; // reálne meno nastavujeme po konverzii
+      dl.download = "";
       dl.style.pointerEvents = it.outBlobUrl ? "auto" : "none";
       dl.style.opacity = it.outBlobUrl ? "1" : ".45";
 
-      // retry button (retry/reconvert)
       const retry = document.createElement("button");
       retry.className = "smallBtn ghost";
       retry.type = "button";
@@ -297,29 +299,25 @@
     }
   };
 
-
   /* =====================================================
-     ADD FILES (pridanie do state + UI refresh)
+     ADD FILES
      ===================================================== */
 
   const addFiles = (newOnes) => {
-    // vyfiltruj iba png/jpg
     const accepted = normalizePicked(newOnes);
-
-    // ak nič neprešlo filtrom, vypíš status
     if (!accepted.length) {
       setStatus("Podporované sú len JPG/PNG.", "bad");
       return;
     }
 
-    // pridaj každú položku do state
     for (const f of accepted) {
       files.push({
         id: nextId++,
         file: f,
         status: "ready",
         outBlobUrl: null,
-        outSize: null
+        outSize: null,
+        progress: 0
       });
     }
 
@@ -327,31 +325,31 @@
     updateButtons();
     render();
     updateSummary();
+    updateGlobalProgress();
   };
 
-
   /* =====================================================
-     CLEAR ALL (vyčistenie state + uvoľnenie blob URL)
+     CLEAR ALL
      ===================================================== */
 
   const clearAll = () => {
-    // revoke ObjectURL aby neunikala pamäť
     for (const it of files) if (it.outBlobUrl) URL.revokeObjectURL(it.outBlobUrl);
-
     files = [];
-
-    // reset file inputu (aby si mohol znova vybrať rovnaký súbor)
     if (fileInput) fileInput.value = "";
 
     setStatus("");
     updateButtons();
     render();
     if (summary) summary.hidden = true;
+
+    // reset global progress (if exists)
+    if (gprog) gprog.hidden = true;
+    if (gprogFill) gprogFill.style.width = "0%";
+    if (gprogPct) gprogPct.textContent = "0%";
   };
 
-
   /* =====================================================
-     UPLOAD INTERACTIONS (klik browse, klik dropzone, enter/space)
+     UPLOAD INTERACTIONS
      ===================================================== */
 
   browse?.addEventListener("click", (e) => {
@@ -365,17 +363,14 @@
     if (e.key === "Enter" || e.key === " ") fileInput?.click();
   });
 
-  // keď user vyberie súbory cez file input
   fileInput?.addEventListener("change", () => {
     if (fileInput.files?.length) addFiles(fileInput.files);
   });
 
-
   /* =====================================================
-     DRAG & DROP (vizuálny “dragover” + drop handler)
+     DRAG & DROP
      ===================================================== */
 
-  // keď user ťahá súbor nad dropzone, aktivuj highlight
   ["dragenter", "dragover"].forEach(evt => {
     dropzone?.addEventListener(evt, (e) => {
       e.preventDefault(); e.stopPropagation();
@@ -383,7 +378,6 @@
     });
   });
 
-  // keď user odíde alebo dropne, vypni highlight
   ["dragleave", "drop"].forEach(evt => {
     dropzone?.addEventListener(evt, (e) => {
       e.preventDefault(); e.stopPropagation();
@@ -391,25 +385,17 @@
     });
   });
 
-  // samotný drop: pridaj súbory
   dropzone?.addEventListener("drop", (e) => {
     const list = e.dataTransfer?.files;
     if (list?.length) addFiles(list);
   });
 
-
-  /* =====================================================
-     CLEAR BUTTON
-     ===================================================== */
-
   clearBtn?.addEventListener("click", clearAll);
-
 
   /* =====================================================
      CONVERT HELPERS
      ===================================================== */
 
-  // zmení status v state a rerenderne UI
   const setItemStatus = (id, status) => {
     const it = files.find(x => x.id === id);
     if (!it) return;
@@ -417,75 +403,107 @@
     render();
   };
 
+  function xhrConvertWithProgress({ file, format, quality, onProgress }) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `/convert?format=${encodeURIComponent(format)}&quality=${encodeURIComponent(quality)}`);
+      xhr.responseType = "blob";
+
+      // upload: 0-50%
+      xhr.upload.onprogress = (e) => {
+        if (!e.lengthComputable) return;
+        const p = (e.loaded / e.total) * 50;
+        onProgress?.(p);
+      };
+
+      // download: 50-100% (needs Content-Length)
+      xhr.onprogress = (e) => {
+        if (!e.lengthComputable) return;
+        const p = 50 + (e.loaded / e.total) * 50;
+        onProgress?.(p);
+      };
+
+      xhr.onload = () => {
+        const ct = (xhr.getResponseHeader("content-type") || "").toLowerCase();
+        const ok = xhr.status >= 200 && xhr.status < 300;
+
+        if (!ok || !ct.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const txt = String(reader.result || "");
+            try {
+              const data = JSON.parse(txt);
+              reject(new Error(data?.error || `Server vrátil ${xhr.status} (${ct})`));
+            } catch {
+              reject(new Error(txt.slice(0, 200) || `Server vrátil ${xhr.status} (${ct})`));
+            }
+          };
+          reader.onerror = () => reject(new Error(`Server vrátil ${xhr.status} (${ct})`));
+          try {
+            reader.readAsText(xhr.response);
+          } catch {
+            reject(new Error(`Server vrátil ${xhr.status} (${ct})`));
+          }
+          return;
+        }
+
+        const blob = xhr.response;
+        if (!blob || blob.size === 0) {
+          reject(new Error("Server vrátil prázdny súbor (0 B)."));
+          return;
+        }
+
+        onProgress?.(100);
+        resolve(blob);
+      };
+
+      xhr.onerror = () => reject(new Error("Network error"));
+
+      const form = new FormData();
+      form.append("image", file);
+      xhr.send(form);
+    });
+  }
 
   /* =====================================================
-     CONVERT ONE (konvertuje jeden súbor cez /convert)
+     CONVERT ONE
      ===================================================== */
 
   async function convertOne(id, force = false) {
     const it = files.find(x => x.id === id);
     if (!it) return false;
 
-    // ochrana proti duplicitnému klikaniu
     if (it.status === "working") return false;
-
-    // ak je už hotovo a nechceš force, tak nič nerob
     if (it.status === "done" && !force) return true;
 
-    // ak existuje starý output, uvoľni URL
     if (it.outBlobUrl) URL.revokeObjectURL(it.outBlobUrl);
     it.outBlobUrl = null;
     it.outSize = null;
+    it.progress = 0;
 
-    // nastav working
     setItemStatus(id, "working");
+    updateGlobalProgress();
 
-    // vyber formát a kvalitu z UI
-    const format = formatEl?.value || "avif";
+    const format = formatEl?.value || "webp";
     const quality = qualityEl?.value || "55";
 
     try {
-      // multipart upload
-      const form = new FormData();
-      form.append("image", it.file);
+      const blob = await xhrConvertWithProgress({
+        file: it.file,
+        format,
+        quality,
+        onProgress: (p) => setItemProgress(id, p)
+      });
 
-      // request na backend endpoint /convert
-      const res = await fetch(
-        `/convert?format=${encodeURIComponent(format)}&quality=${encodeURIComponent(quality)}`,
-        { method: "POST", body: form }
-      );
-
-      // content-type: očakávame image/*
-      const ct = (res.headers.get("content-type") || "").toLowerCase();
-
-      // ak server vráti error (JSON/text), skús ho vytiahnuť
-      if (!res.ok || !ct.startsWith("image/")) {
-        const txt = await res.text().catch(() => "");
-        try {
-          const data = JSON.parse(txt);
-          throw new Error(data?.error || `Server vrátil ${res.status} (${ct})`);
-        } catch {
-          throw new Error(txt?.slice(0, 200) || `Server vrátil ${res.status} (${ct})`);
-        }
-      }
-
-      // výsledok ako Blob (obrázok)
-      const blob = await res.blob();
-
-      // ochrana: 0B output je bug
-      if (!blob || blob.size === 0) throw new Error("Server vrátil prázdny súbor (0 B).");
-
-      // ulož output info do state
       it.outSize = blob.size;
       it.outBlobUrl = URL.createObjectURL(blob);
       it.status = "done";
+      it.progress = 100;
 
-      // nastav filename pre download
       const ext = format === "jpeg" ? "jpg" : format;
       const base = (it.file.name || "image").replace(/\.[^.]+$/, "");
       const filename = `${base}.${ext}`;
 
-      // update priamo download button v DOM (zrýchlenie UX)
       const node = listEl?.querySelector(`.item[data-id="${id}"] a.smallBtn`);
       if (node) {
         node.href = it.outBlobUrl;
@@ -496,57 +514,57 @@
 
       render();
       updateSummary();
+      updateGlobalProgress();
       return true;
 
     } catch (e) {
       console.error(e);
       it.status = "error";
+      it.progress = 0;
       render();
+      updateGlobalProgress();
       setStatus(e?.message || "Konverzia zlyhala.", "bad");
       return false;
     }
   }
 
-
   /* =====================================================
-     CONVERT ALL (batch konverzia postupne)
+     CONVERT ALL (batch sequential)
      ===================================================== */
 
   async function convertAll() {
     if (!files.length) return;
 
-    // zablokuj tlačidlá aby user nerobil chaos počas batchu
     if (convertBtn) convertBtn.disabled = true;
     if (clearBtn) clearBtn.disabled = true;
 
     setStatus("Konvertujem batch…", "");
+    updateGlobalProgress();
 
-    // postupne (nie paralelne) konvertuj každú položku
     let ok = 0;
     for (const it of files) {
       const r = await convertOne(it.id, true);
       if (r) ok++;
     }
 
-    // odomkni UI
     if (convertBtn) convertBtn.disabled = false;
     if (clearBtn) clearBtn.disabled = false;
 
-    // výsledný status
     if (ok === files.length) setStatus(`Hotovo ✅ Konvertované: ${ok}/${files.length}`, "ok");
     else setStatus(`Dokončené s chybami: ${ok}/${files.length}`, "bad");
 
     updateSummary();
+    updateGlobalProgress();
   }
 
-  // click handler na Convert
   convertBtn?.addEventListener("click", convertAll);
 
-
   /* =====================================================
-     INITIAL UI STATE (pri načítaní stránky)
+     INITIAL UI
      ===================================================== */
 
   updateButtons();
   render();
+  updateSummary();
+  updateGlobalProgress();
 })();
