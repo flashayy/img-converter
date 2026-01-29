@@ -18,6 +18,12 @@
     return `${((1 - outB / inB) * 100).toFixed(1)}%`;
   };
 
+  const safeName = (name) =>
+    String(name || "file")
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
+      .replace(/\s+/g, " ")
+      .trim();
+
   /* =====================================================
      DOM ELEMENTS
      ===================================================== */
@@ -32,6 +38,7 @@
 
   const convertBtn = $("convert");
   const clearBtn = $("clear");
+  const zipBtn = $("zip");
   const statusEl = $("status");
 
   const listEl = $("list");
@@ -68,18 +75,22 @@
     console.error("Missing one or more DOM elements. Check index.html ids.", {
       dropzone, fileInput, browse,
       formatEl, qualityEl, qVal,
-      convertBtn, clearBtn, statusEl,
+      convertBtn, clearBtn, zipBtn, statusEl,
       listEl, emptyState,
       summary, sumIn, sumOut, sumSave,
       themeToggle, themeIcon, themeText
     });
   }
 
+  if (!window.JSZip) {
+    console.warn("JSZip nie je načítaný. Skontroluj <script src=...jszip...> v index.html");
+  }
+
   /* =====================================================
      APP STATE
      ===================================================== */
 
-  // each item: { id, file, status, outBlobUrl, outSize, progress }
+  // each item: { id, file, status, outBlobUrl, outBlob, outSize, progress }
   let files = [];
   let nextId = 1;
 
@@ -140,10 +151,15 @@
      UI ENABLE/DISABLE
      ===================================================== */
 
+  function anyConverted() {
+    return files.some(f => f.status === "done" && f.outBlob);
+  }
+
   const updateButtons = () => {
     const has = files.length > 0;
     if (convertBtn) convertBtn.disabled = !has;
     if (clearBtn) clearBtn.disabled = !has;
+    if (zipBtn) zipBtn.disabled = !anyConverted();
   };
 
   /* =====================================================
@@ -297,6 +313,8 @@
       item.appendChild(actions);
       listEl.appendChild(item);
     }
+
+    updateButtons();
   };
 
   /* =====================================================
@@ -316,6 +334,7 @@
         file: f,
         status: "ready",
         outBlobUrl: null,
+        outBlob: null,
         outSize: null,
         progress: 0
       });
@@ -342,7 +361,6 @@
     render();
     if (summary) summary.hidden = true;
 
-    // reset global progress (if exists)
     if (gprog) gprog.hidden = true;
     if (gprogFill) gprogFill.style.width = "0%";
     if (gprogPct) gprogPct.textContent = "0%";
@@ -478,6 +496,7 @@
 
     if (it.outBlobUrl) URL.revokeObjectURL(it.outBlobUrl);
     it.outBlobUrl = null;
+    it.outBlob = null;
     it.outSize = null;
     it.progress = 0;
 
@@ -495,13 +514,14 @@
         onProgress: (p) => setItemProgress(id, p)
       });
 
+      it.outBlob = blob;
       it.outSize = blob.size;
       it.outBlobUrl = URL.createObjectURL(blob);
       it.status = "done";
       it.progress = 100;
 
       const ext = format === "jpeg" ? "jpg" : format;
-      const base = (it.file.name || "image").replace(/\.[^.]+$/, "");
+      const base = safeName((it.file.name || "image").replace(/\.[^.]+$/, ""));
       const filename = `${base}.${ext}`;
 
       const node = listEl?.querySelector(`.item[data-id="${id}"] a.smallBtn`);
@@ -529,7 +549,7 @@
   }
 
   /* =====================================================
-     CONVERT ALL (batch sequential)
+     CONVERT ALL
      ===================================================== */
 
   async function convertAll() {
@@ -537,6 +557,7 @@
 
     if (convertBtn) convertBtn.disabled = true;
     if (clearBtn) clearBtn.disabled = true;
+    if (zipBtn) zipBtn.disabled = true;
 
     setStatus("Konvertujem batch…", "");
     updateGlobalProgress();
@@ -555,9 +576,94 @@
 
     updateSummary();
     updateGlobalProgress();
+    updateButtons();
   }
 
   convertBtn?.addEventListener("click", convertAll);
+
+  /* =====================================================
+     ZIP DOWNLOAD
+     ===================================================== */
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  async function downloadZip() {
+    if (!window.JSZip) {
+      setStatus("JSZip nie je načítaný. Skontroluj CDN v index.html.", "bad");
+      return;
+    }
+
+    const done = files.filter(f => f.status === "done" && f.outBlob);
+    if (!done.length) {
+      setStatus("Najprv niečo skonvertuj, potom ZIP.", "bad");
+      return;
+    }
+
+    try {
+      if (zipBtn) zipBtn.disabled = true;
+      if (convertBtn) convertBtn.disabled = true;
+      if (clearBtn) clearBtn.disabled = true;
+
+      const zip = new JSZip();
+
+      // názvy v ZIP-e budú podľa originálu + aktuálneho výstupu
+      const format = formatEl?.value || "webp";
+      const ext = format === "jpeg" ? "jpg" : format;
+
+      // ak sa opakujú mená, pridáme (2), (3)...
+      const used = new Map();
+
+      for (const it of done) {
+        const base = safeName((it.file.name || "image").replace(/\.[^.]+$/, ""));
+        let name = `${base}.${ext}`;
+        const cnt = used.get(name) || 0;
+        used.set(name, cnt + 1);
+        if (cnt > 0) {
+          name = `${base} (${cnt + 1}).${ext}`;
+        }
+
+        zip.file(name, it.outBlob);
+      }
+
+      setStatus("Balím ZIP…", "");
+
+      const zipBlob = await zip.generateAsync(
+        { type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } },
+        (meta) => {
+          // ZIP progress (nie upload, ale samotné balenie)
+          const p = Math.round(meta.percent || 0);
+          setStatus(`Balím ZIP… ${p}%`, "");
+        }
+      );
+
+      const stamp = new Date();
+      const yyyy = stamp.getFullYear();
+      const mm = String(stamp.getMonth() + 1).padStart(2, "0");
+      const dd = String(stamp.getDate()).padStart(2, "0");
+      const zipName = `converted-${yyyy}-${mm}-${dd}.zip`;
+
+      downloadBlob(zipBlob, zipName);
+      setStatus(`ZIP pripravený ✅ (${done.length} súborov)`, "ok");
+    } catch (e) {
+      console.error(e);
+      setStatus(e?.message || "ZIP zlyhal.", "bad");
+    } finally {
+      updateButtons();
+      if (convertBtn) convertBtn.disabled = files.length === 0;
+      if (clearBtn) clearBtn.disabled = files.length === 0;
+    }
+  }
+
+  zipBtn?.addEventListener("click", downloadZip);
 
   /* =====================================================
      INITIAL UI

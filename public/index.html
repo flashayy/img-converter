@@ -1,134 +1,134 @@
 <!doctype html>
 <html lang="sk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Image Converter</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Image Converter</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-
-<body>
-  <div class="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="logo" aria-hidden="true">◎</div>
-        <div>
-          <div class="title">Image Converter</div>
-          <div class="subtitle">Batch • WebP • Porovnanie • Theme toggle</div>
-        </div>
-      </div>
-
-      <div class="right">
-        <button class="pill" id="themeToggle" type="button" aria-label="Prepnúť Dark/Light">
-          <span id="themeIcon" aria-hidden="true">☾</span>
-          <span id="themeText">Dark</span>
-        </button>
-        <a class="pill" href="/health" target="_blank" rel="noreferrer">API status</a>
-      </div>
-    </header>
-
-    <main class="wrap">
-      <section class="hero">
-        <h1>Konvertuj obrázky</h1>
-        <p>
-          Dropni viac súborov naraz, vyber formát a kvalitu. Uvidíš koľko MB a % si ušetril.
-        </p>
-      </section>
-
-      <section class="grid">
-        <div class="card">
-          <div class="cardHead">
-            <div class="cardTitle">Upload</div>
-            <div class="cardHint">JPG/PNG • viac súborov naraz</div>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="logo" aria-hidden="true">◎</div>
+          <div>
+            <div class="title">Konvertuj obrázky</div>
+            <div class="subtitle">Batch upload • Porovnanie • Dark/Light • ZIP</div>
           </div>
+        </div>
 
-          <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Drag & drop upload">
-            <input id="file" type="file" accept="image/jpeg,image/png" multiple hidden />
-            <div class="dzIcon" aria-hidden="true">⬆</div>
-            <div class="dzText">
-              <div class="dzTitle">Pretiahni sem súbory</div>
-              <div class="dzSub">
-                alebo <span class="linkish" id="browse">vyber súbory</span>
-                <span class="hint">(JPG/PNG)</span>
+        <div class="right">
+          <button class="pill" id="themeToggle" type="button" aria-label="Prepnúť Dark/Light">
+            <span id="themeIcon" aria-hidden="true">☾</span>
+            <span id="themeText">Dark</span>
+          </button>
+          <a class="pill" href="/health" target="_blank" rel="noreferrer">API status</a>
+        </div>
+      </header>
+
+      <main class="wrap">
+        <section class="hero">
+          <h1>Dropni súbory, vyber formát, uvidíš úsporu. 🧊</h1>
+          <p>Podporuje JPG/PNG. Výstup: AVIF/WebP/JPG. Pri každom súbore uvidíš “pred vs po”.</p>
+        </section>
+
+        <section class="grid">
+          <div class="card">
+            <div class="cardHead">
+              <div class="cardTitle">Upload</div>
+              <div class="cardHint">JPG/PNG • viac súborov naraz</div>
+            </div>
+
+            <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Drag & drop upload">
+              <input id="file" type="file" accept="image/jpeg,image/png" multiple hidden />
+              <div class="dzIcon" aria-hidden="true">⬆</div>
+              <div class="dzText">
+                <div class="dzTitle">Pretiahni sem súbory</div>
+                <div class="dzSub">
+                  alebo <span class="linkish" id="browse">vyber súbory</span>
+                  <span class="hint">(JPG/PNG)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="controls">
+              <div class="field">
+                <label for="format">Formát</label>
+                <select id="format">
+                  <option value="avif">AVIF (najmenší)</option>
+                  <option value="webp">WebP (kompatibilný)</option>
+                  <option value="jpg">JPG (fallback)</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="quality">Kvalita</label>
+                <div class="rangeRow">
+                  <input id="quality" type="range" min="35" max="90" value="55" />
+                  <div class="badge"><span id="qVal">55</span></div>
+                </div>
+                <div class="help">55–70 býva sweet spot pre web.</div>
+              </div>
+            </div>
+
+            <div class="btnRow">
+              <button class="btn ghost" id="clear" disabled type="button">Vymazať</button>
+              <button class="btn ghost" id="zip" disabled type="button">Download ZIP</button>
+              <button class="btn" id="convert" disabled type="button">Konvertovať všetko</button>
+            </div>
+
+            <div class="status" id="status"></div>
+
+            <!-- Global progress (ak ho máš) -->
+            <div class="gprog" id="gprog" hidden>
+              <div class="gprogTop">
+                <div class="gprogLabel">Progress</div>
+                <div class="gprogPct" id="gprogPct">0%</div>
+              </div>
+              <div class="gprogBar">
+                <div class="gprogFill" id="gprogFill" style="width:0%"></div>
+              </div>
+            </div>
+
+            <div class="summary" id="summary" hidden>
+              <div class="sumCard">
+                <div class="sumLabel">Pôvodne</div>
+                <div class="sumValue" id="sumIn">–</div>
+              </div>
+              <div class="sumCard">
+                <div class="sumLabel">Po konverzii</div>
+                <div class="sumValue" id="sumOut">–</div>
+              </div>
+              <div class="sumCard accent">
+                <div class="sumLabel">Ušetrené</div>
+                <div class="sumValue" id="sumSave">–</div>
               </div>
             </div>
           </div>
 
-          <div class="controls">
-            <div class="field">
-              <label for="format">Formát</label>
-              <select id="format">
-                <option value="webp">WebP (kompatibilný)</option>
-                <option value="jpg">JPG (fallback)</option>
-              </select>
+          <div class="card">
+            <div class="cardHead">
+              <div class="cardTitle">Batch výsledky</div>
+              <div class="cardHint">Download je aktívny až po úspechu</div>
             </div>
 
-            <div class="field">
-              <label for="quality">Kvalita</label>
-              <div class="rangeRow">
-                <input id="quality" type="range" min="35" max="90" value="55" />
-                <div class="badge"><span id="qVal">55</span></div>
+            <div class="list" id="list">
+              <div class="empty" id="emptyState">
+                Zatiaľ nič. Nahraj súbory a klikni “Konvertovať všetko”.
               </div>
-              <div class="help">55–70 býva sweet spot pre web.</div>
             </div>
           </div>
+        </section>
 
-          <div class="btnRow">
-            <button class="btn ghost" id="clear" disabled type="button">Vymazať</button>
-            <button class="btn" id="convert" disabled type="button">Konvertovať všetko</button>
-          </div>
+        <footer class="footer">
+          Beží lokálne cez tvoj server (sharp). Žiadne cudzie cloud konvertory.
+        </footer>
+      </main>
+    </div>
 
-          <div class="status" id="status"></div>
-
-          <div class="gprog" id="gprog" hidden>
-            <div class="gprogTop">
-              <div class="gprogLabel">Progress</div>
-              <div class="gprogPct" id="gprogPct">0%</div>
-            </div>
-            <div class="gprogBar">
-              <div class="gprogFill" id="gprogFill" style="width:0%"></div>
-            </div>
-          </div>
-
-          
-          <div class="summary" id="summary" hidden>
-            <div class="sumCard">
-              <div class="sumLabel">Pôvodne</div>
-              <div class="sumValue" id="sumIn">–</div>
-            </div>
-            <div class="sumCard">
-              <div class="sumLabel">Po konverzii</div>
-              <div class="sumValue" id="sumOut">–</div>
-            </div>
-            <div class="sumCard accent">
-              <div class="sumLabel">Ušetrené</div>
-              <div class="sumValue" id="sumSave">–</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="cardHead">
-            <div class="cardTitle">Batch výsledky</div>
-            <div class="cardHint">klikni Download pri konkrétnom súbore</div>
-          </div>
-
-          <div class="list" id="list">
-            <div class="empty" id="emptyState">
-              Zatiaľ nič. Nahraj súbory a začneš konvertovať.
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer class="footer">
-        Beží lokálne cez tvoj server (sharp). Žiadne cudzie cloud konvertory.
-      </footer>
-    </main>
-  </div>
-
-  <script src="script.js"></script>
-</body>
-
+    <!-- ✅ JSZip (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="script.js"></script>
+  </body>
 </html>
