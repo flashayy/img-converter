@@ -1,0 +1,410 @@
+:root {
+  --bg: #0b1020;
+  --bg2: #070a12;
+  --card: rgba(255, 255, 255, .06);
+  --stroke: rgba(255, 255, 255, .12);
+  --text: rgba(255, 255, 255, .92);
+  --muted: rgba(255, 255, 255, .6);
+  --radius: 18px;
+  --shadow: 0 18px 60px rgba(0, 0, 0, .45);
+  --accent: rgba(122, 162, 255, .9);
+  --ok: rgba(80, 255, 206, .92);
+  --bad: rgba(255, 122, 122, .92);
+}
+
+[data-theme="light"] {
+  --bg: #f6f7fb;
+  --bg2: #ffffff;
+  --card: rgba(10, 14, 28, .05);
+  --stroke: rgba(10, 14, 28, .12);
+  --text: rgba(10, 14, 28, .92);
+  --muted: rgba(10, 14, 28, .6);
+  --shadow: 0 18px 50px rgba(10, 14, 28, .15);
+}
+
+* {
+  box-sizing: border-box
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, var(--bg), var(--bg2));
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 32px
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--stroke);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-weight: 900
+}
+
+.title {
+  font-weight: 950
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, .45)
+}
+
+[data-theme="light"] .subtitle {
+  color: rgba(10, 14, 28, .45)
+}
+
+.pill {
+  border: 1px solid var(--stroke);
+  background: var(--card);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  text-decoration: none
+}
+
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px 32px 40px
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 38px;
+  letter-spacing: -.6px
+}
+
+.hero p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.6
+}
+
+.grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 16px
+}
+
+@media (max-width:920px) {
+  .grid {
+    grid-template-columns: 1fr
+  }
+}
+
+.card {
+  border: 1px solid var(--stroke);
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px
+}
+
+.cardTitle {
+  font-weight: 950
+}
+
+.cardHint {
+  opacity: .6;
+  font-size: 13px
+}
+
+.dropzone {
+  border: 1px dashed var(--stroke);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  cursor: pointer
+}
+
+.dropzone.dragover {
+  border-color: var(--accent);
+  background: rgba(122, 162, 255, .10)
+}
+
+.dzIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  display: grid;
+  place-items: center
+}
+
+.linkish {
+  text-decoration: underline;
+  text-underline-offset: 3px
+}
+
+.controls {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px
+}
+
+@media (max-width:560px) {
+  .controls {
+    grid-template-columns: 1fr
+  }
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-weight: 850;
+  font-size: 13px
+}
+
+select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  background: var(--bg2);
+  color: var(--text)
+}
+
+.rangeRow {
+  display: flex;
+  gap: 10px;
+  align-items: center
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent)
+}
+
+.badge {
+  min-width: 52px;
+  text-align: center;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, .04);
+  font-weight: 900
+}
+
+.help {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, .45);
+  font-size: 13px
+}
+
+[data-theme="light"] .help {
+  color: rgba(10, 14, 28, .45)
+}
+
+.btnRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px
+}
+
+.btn {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, .06);
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer
+}
+
+.btn.ghost {
+  background: rgba(255, 255, 255, .03)
+}
+
+.btn:disabled {
+  opacity: .45;
+  cursor: not-allowed
+}
+
+.status {
+  margin-top: 10px;
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 13px
+}
+
+.status.ok {
+  color: var(--ok)
+}
+
+.status.bad {
+  color: var(--bad)
+}
+
+.summary {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px
+}
+
+@media (max-width:560px) {
+  .summary {
+    grid-template-columns: 1fr
+  }
+}
+
+.sumCard {
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  padding: 12px
+}
+
+.sumLabel {
+  opacity: .6;
+  font-size: 13px;
+  font-weight: 850
+}
+
+.sumValue {
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 950
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 6px
+}
+
+.empty {
+  opacity: .6;
+  border: 1px dashed var(--stroke);
+  border-radius: 16px;
+  padding: 16px
+}
+
+.item {
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px
+}
+
+.itemTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center
+}
+
+.itemName {
+  font-weight: 950;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 520px
+}
+
+.itemBadge {
+  font-size: 12px;
+  opacity: .8;
+  border: 1px solid var(--stroke);
+  padding: 6px 10px;
+  border-radius: 999px
+}
+
+.itemMeta {
+  margin-top: 8px;
+  opacity: .8;
+  font-size: 13px
+}
+
+.kpi {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px
+}
+
+.k {
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 10px
+}
+
+.kLabel {
+  opacity: .6;
+  font-size: 12px;
+  font-weight: 850
+}
+
+.kVal {
+  margin-top: 6px;
+  font-weight: 950
+}
+
+.itemActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 150px
+}
+
+.smallBtn {
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, .06);
+  color: var(--text);
+  text-decoration: none;
+  text-align: center;
+  font-weight: 900;
+  cursor: pointer
+}
+
+.smallBtn.ghost {
+  background: rgba(255, 255, 255, .03)
+}
+
+.footer {
+  margin-top: 18px;
+  opacity: .6;
+  font-size: 13px
+}

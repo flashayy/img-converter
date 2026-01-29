@@ -1,0 +1,21 @@
+# Node
+node_modules/
+
+# upload temp files (náš multer disk storage)
+uploads/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env
+.env
+
+# OS bordel
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
