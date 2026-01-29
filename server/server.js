@@ -116,3 +116,11 @@ app.use((err, _req, res, next) => {
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`🚀 Server: http://localhost:${port}`));
+
+app.get("/capabilities", (_req, res) => {
+  res.json({
+    avif: !!(sharp.format?.avif?.output),
+    webp: !!(sharp.format?.webp?.output),
+    jpg: true
+  });
+});
